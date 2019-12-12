@@ -39,6 +39,10 @@
 #include <string>
 #include <sstream>
 
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
+#include <iostream>
+
 namespace po = boost::program_options;
 
 //! Parse the command-line arguments for recorder options
@@ -53,7 +57,6 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       ("regex,e", "match topics using regular expressions")
       ("exclude,x", po::value<std::string>(), "exclude topics matching regular expressions")
       ("quiet,q", "suppress console output")
-      ("publish,p", "Publish a msg when the record begin")
       ("output-prefix,o", po::value<std::string>(), "prepend PREFIX to beginning of bag name")
       ("output-name,O", po::value<std::string>(), "record bagnamed NAME.bag")
       ("buffsize,b", po::value<int>()->default_value(256), "Use an internal buffer of SIZE MB (Default: 256)")
@@ -71,7 +74,7 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
       ("tcpnodelay", "Use the TCP_NODELAY transport hint when subscribing to topics.")
       ("udp", "Use the UDP transport hint when subscribing to topics.");
 
-  
+
     po::positional_options_description p;
     p.add("topic", -1);
     
@@ -104,8 +107,6 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
     }
     if (vm.count("quiet"))
       opts.quiet = true;
-    if (vm.count("publish"))
-      opts.publish = true;
     if (vm.count("output-prefix"))
     {
       opts.prefix = vm["output-prefix"].as<std::string>();
@@ -276,6 +277,62 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
     return opts;
 }
 
+// parameter settings
+static void getLaunchParams(rosbag::RecorderOptions& opts, ros::NodeHandle& private_nh_){
+
+  std::string topics;
+  private_nh_.param<std::string>("topics", topics, "");
+
+  //add topics to be rosbaged.
+  std::istringstream stream(topics);
+  std::string result;
+  while(std::getline(stream, result, ' ')){
+    if( result.length() > 0 ){
+      opts.topics.push_back(result);
+    }
+  }
+
+  std::string exclude_topics;
+  private_nh_.param<std::string>("exclude_topics", exclude_topics, "");
+  if(exclude_topics != ""){
+      opts.do_exclude = true;
+      opts.exclude_regex = exclude_topics;
+  }  
+
+  std::string regex;
+  private_nh_.param<std::string>("regex", regex, "");
+  if(regex != ""){
+    opts.regex = true;
+  }
+  private_nh_.param<std::string>("prefix", opts.prefix, opts.prefix);
+  fs::path p(opts.prefix);
+  auto filename = p.filename().generic_string();   
+  if( filename != opts.prefix ){
+    auto len = opts.prefix.length() - filename.length();
+    auto dirname = opts.prefix.substr(0, len);
+    fs::path directory(dirname);
+    fs::create_directories(directory);
+  }
+
+  private_nh_.param<bool>("split", opts.split, opts.split);
+  int duration;
+  private_nh_.param<int>("duration", duration, opts.max_duration.sec);
+  opts.max_duration = ros::Duration(duration);
+  int max_splits;
+  private_nh_.param<int>("max_splits", max_splits, opts.max_splits);
+  opts.max_splits = max_splits;
+}
+
+#if 0
+//just for debuging
+static void print_topics(rosbag::RecorderOptions& opts){
+    ROS_INFO("topics");
+    for (std::vector<std::string>::iterator i = opts.topics.begin(); i != opts.topics.end(); i++){
+      ROS_INFO("%s", i->c_str() );
+    }
+}
+#endif
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "record", ros::init_options::AnonymousName);
 
@@ -292,6 +349,9 @@ int main(int argc, char** argv) {
         ROS_ERROR("Error reading options: %s\n", ex.what());
         return 1;
     }
+    ros::NodeHandle private_nh_("~");
+    getLaunchParams(opts, private_nh_);
+    //print_topics(opts);
 
     // Run the recorder
     rosbag::Recorder recorder(opts);
