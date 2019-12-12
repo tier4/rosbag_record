@@ -1,0 +1,16 @@
+<launch>
+    <node
+        pkg="rosbag_record"
+        type="record"
+        name="rosbag_record"
+        respawn="true"
+        respawn_delay="1"
+        args="/bbb"       >
+        <param name="prefix" value="$(env HOME)/.ros/log/latest/rosbag/latest/rosbag"/>
+        <param name="topics" value="/abcd /efg /hij"/>
+        <param name="exclude_topics" value="/rosout|(.*)/image_raw|/velodyne_(.*)_manager(.*)|(.*)/velodyne_points"/>
+        <param name="split" value="true"/>
+        <param name="duration" value="60"/>
+        <param name="max_splits" value="11"/>
+    </node>
+</launch>
