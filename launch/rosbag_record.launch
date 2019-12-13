@@ -6,11 +6,12 @@
         respawn="true"
         respawn_delay="1"
         args="">
-        <param name="prefix" value="$(env HOME)/.ros/log/latest/rosbag/latest/rosbag"/>
-        <param name="exclude_topics" value="/rosout|(.*)/image_raw|/velodyne_(.*)_manager(.*)|(.*)/velodyne_points"/>
+        <param name="output_prefix" value="$(env HOME)/.ros/log/latest/rosbag/latest/rosbag"/>
         <param name="split" value="true"/>
         <param name="duration" value="60"/>
         <param name="max_splits" value="11"/>
-        <param name="topics" value="/xxx,/yyy,/zzz"/>
+        <rosparam param="topics">
+          [ /rosout, /yyy, /zzz ]
+        </rosparam>
     </node>
 </launch>
