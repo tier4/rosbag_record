@@ -277,53 +277,198 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
     return opts;
 }
 
-// parameter settings
-static void getLaunchParams(rosbag::RecorderOptions& opts, ros::NodeHandle& private_nh_){
+static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle& private_nh_)
+{
+  private_nh_.param("all", opts.record_all, opts.record_all);
+  private_nh_.param("regex", opts.regex, opts.regex);
 
-  std::string topics;
-  private_nh_.param<std::string>("topics", topics, "");
+  private_nh_.param("regex", opts.regex, opts.regex);
+  int val;
 
-  //add topics to be rosbaged.
-  std::istringstream stream(topics);
-  std::string result;
-  while(std::getline(stream, result, ' ')){
-    if( result.length() > 0 ){
-      opts.topics.push_back(result);
-    }
+  std::string exclude;
+  if( private_nh_.getParam("exclude", exclude) )
+  {
+    opts.do_exclude = true;
+    opts.exclude_regex = exclude;
+  }
+  private_nh_.param("quiet", opts.quiet, opts.quiet);
+
+  std::string output_prefix;
+  if( private_nh_.getParam("output_prefix", output_prefix) )
+  {
+    opts.prefix = output_prefix;
+    opts.append_date = true;
+  }
+  std::string output_name;
+  if( private_nh_.getParam("output_name", output_name) )
+  {
+    opts.prefix = output_name;
+    opts.append_date = false;
+  }
+  if( private_nh_.getParam("split", val ) ){
+    opts.split = true;
+    if (val < 0)
+      throw ros::Exception("Split size must be 0 or positive");
+    opts.max_size = 1048576 * static_cast<uint64_t>(val);    
+  }
+  if( private_nh_.getParam("max_splits", val )){
+    opts.max_splits = val;
   }
 
+  if( private_nh_.getParam("buffsize", val) ){
+    if ( val < 0)
+    {
+      throw ros::Exception("Buffer size must be 0 or positive");
+    }
+    opts.buffer_size = 1048576 * val;
+  }
+  if( private_nh_.getParam("chunksize", val) ){
+    if (val < 0)
+    {
+      throw ros::Exception("Chunk size must be 0 or positive");
+    }
+    opts.chunk_size = 1024 * val;
+  }
+  if( private_nh_.getParam("limit", val) ){
+    opts.limit = val;
+  }
+  std::string ms;
+  if ( private_nh_.getParam("min_space", ms) )
+  {
+      long long int value = 1073741824ull;
+      char mul = 0;
+      // Sane default values, just in case
+      opts.min_space_str = "1G";
+      opts.min_space = value;
+      if (sscanf(ms.c_str(), " %lld%c", &value, &mul) > 0) {
+          opts.min_space_str = ms;
+          switch (mul) {
+              case 'G':
+              case 'g':
+                  opts.min_space = value * 1073741824ull;
+                  break;
+              case 'M':
+              case 'm':
+                  opts.min_space = value * 1048576ull;
+                  break;
+              case 'K':
+              case 'k':
+                  opts.min_space = value * 1024ull;
+                  break;
+              default:
+                  opts.min_space = value;
+                  break;
+          }
+      }
+      ROS_DEBUG("Rosbag using minimum space of %lld bytes, or %s", opts.min_space, opts.min_space_str.c_str());
+  }
+  bool bz2;
+  private_nh_.param("bz2", bz2, false);
+  bool lz4;
+  private_nh_.param("lz4", lz4, false);
+  if (bz2 && lz4)
+  {
+    throw ros::Exception("Can only use one type of compression");
+  }
+  if (bz2)
+  {
+    opts.compression = rosbag::compression::BZ2;
+  }
+  if (lz4)
+  {
+    opts.compression = rosbag::compression::LZ4;
+  }
+
+  std::string duration_str;
+  if( private_nh_.getParam("duration", duration_str ) )
+  {
+    double duration;
+    double multiplier = 1.0;
+    std::string unit("");
+
+    std::istringstream iss(duration_str);
+    if ((iss >> duration).fail())
+      throw ros::Exception("Duration must start with a floating point number.");
+
+    if ( (!iss.eof() && ((iss >> unit).fail())) )
+    {
+      throw ros::Exception("Duration unit must be s, m, or h");
+    }
+    if (unit == std::string(""))
+      multiplier = 1.0;
+    else if (unit == std::string("s"))
+      multiplier = 1.0;
+    else if (unit == std::string("m"))
+      multiplier = 60.0;
+    else if (unit == std::string("h"))
+      multiplier = 3600.0;
+    else
+      throw ros::Exception("Duration unit must be s, m, or h");
+
+      
+    opts.max_duration = ros::Duration(duration * multiplier);
+    if (opts.max_duration <= ros::Duration(0))
+      throw ros::Exception("Duration must be positive.");
+  }
+
+
+  if( private_nh_.getParam("size", val ) )
+  {
+    if (val < 0)
+    {
+      throw ros::Exception("Split size must be 0 or positive");
+    }
+    opts.max_size = val;
+  }
+  std::string node;
+  if( private_nh_.getParam("node", node ) )
+  {
+    opts.node = node;
+  }
+  std::string tcpnodelay;
+  if( private_nh_.getParam("tcpnodelay", tcpnodelay ) )
+  {
+      throw ros::Exception("tcpnodelay not supported yet");
+  }
+
+  std::string udp;
+  if( private_nh_.getParam("udp", udp ) )
+  {
+      throw ros::Exception("udp not supported yet");
+  }
+
+#if 1
+  std::string string_topics;
+  if( private_nh_.getParam("topics", string_topics ) ){
+    //
+  }
+  ROS_ERROR("topics size %d ##%s##", string_topics.size(), string_topics.c_str());
+#endif
+  //add topics to be rosbaged.
+  std::vector<std::string> topics;
+  private_nh_.param<std::vector<std::string>>("topics", topics, topics);
+  ROS_ERROR("topics size %d", topics.size());
+  //add topics to be rosbaged.
+  for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
+    ROS_ERROR("topics %s", i->c_str() );
+    opts.topics.push_back(*i);
+  }
   std::string exclude_topics;
-  private_nh_.param<std::string>("exclude_topics", exclude_topics, "");
-  if(exclude_topics != ""){
+  if( private_nh_.getParam("exclude_topics", exclude_topics ) ){
       opts.do_exclude = true;
       opts.exclude_regex = exclude_topics;
   }  
 
-  std::string regex;
-  private_nh_.param<std::string>("regex", regex, "");
-  if(regex != ""){
-    opts.regex = true;
-  }
-  private_nh_.param<std::string>("prefix", opts.prefix, opts.prefix);
-  fs::path p(opts.prefix);
-  auto filename = p.filename().generic_string();   
-  if( filename != opts.prefix ){
-    auto len = opts.prefix.length() - filename.length();
-    auto dirname = opts.prefix.substr(0, len);
-    fs::path directory(dirname);
-    fs::create_directories(directory);
+  if(opts.exclude_regex.size() > 0 &&
+          !(opts.record_all || opts.regex)) {
+      fprintf(stderr, "Warning: Exclusion regex given, but no topics to subscribe to.\n"
+              "Adding implicit 'record all'.");
+      opts.record_all = true;
   }
 
-  private_nh_.param<bool>("split", opts.split, opts.split);
-  int duration;
-  private_nh_.param<int>("duration", duration, opts.max_duration.sec);
-  opts.max_duration = ros::Duration(duration);
-  int max_splits;
-  private_nh_.param<int>("max_splits", max_splits, opts.max_splits);
-  opts.max_splits = max_splits;
 }
 
-#if 0
+#if 1
 //just for debuging
 static void print_topics(rosbag::RecorderOptions& opts){
     ROS_INFO("topics");
@@ -351,7 +496,16 @@ int main(int argc, char** argv) {
     }
     ros::NodeHandle private_nh_("~");
     getLaunchParams(opts, private_nh_);
-    //print_topics(opts);
+    print_topics(opts);
+    
+    fs::path p(opts.prefix);
+    auto filename = p.filename().generic_string();   
+    if( filename != opts.prefix ){
+      auto len = opts.prefix.length() - filename.length();
+      auto dirname = opts.prefix.substr(0, len);
+      fs::path directory(dirname);
+      fs::create_directories(directory);
+    } 
 
     // Run the recorder
     rosbag::Recorder recorder(opts);
