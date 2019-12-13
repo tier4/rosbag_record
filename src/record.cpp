@@ -434,32 +434,17 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       throw ros::Exception("udp not supported yet");
   }
 
-#if 1
   //add topics to be rosbaged.
   std::vector<std::string> topics;
   private_nh_.param<std::vector<std::string>>("topics", topics, topics );//try to get params as string-vector
-  ROS_ERROR("topics vector size %d", topics.size());
+  //ROS_ERROR("topics vector size %d", topics.size());
   if( topics.size() > 0 ){
     //add topics to be rosbaged.
     for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
-      ROS_ERROR("topics vector %s", i->c_str() );
+      //ROS_ERROR("topics vector %s", i->c_str() );
       opts.topics.push_back(*i);
     }
   }
-  else //try to get params as string
-  {
-    std::string string_topics;
-    if( private_nh_.getParam("topics", string_topics ) )
-    {
-      std::stringstream ss(string_topics);
-      std::string s;
-       while( getline(ss, s, ',' )){//split by ',' and add to opts.topics.
-        opts.topics.push_back(s);
-      }
-    }
-    ROS_ERROR("topics string ##%s##", string_topics.c_str());
-  }
-#endif
 
   if(opts.exclude_regex.size() > 0 &&
           !(opts.record_all || opts.regex)) {
@@ -467,26 +452,27 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
               "Adding implicit 'record all'.");
       opts.record_all = true;
   }
-
 }
 
-#if 1
 static void print_topics(rosbag::RecorderOptions& opts){
+#if 0
     ROS_ERROR("topics");
     for (std::vector<std::string>::iterator i = opts.topics.begin(); i != opts.topics.end(); i++){
       ROS_ERROR("%s", i->c_str() );
     }
-}
 #endif
+}
 
 static void createDirectory(const rosbag::RecorderOptions &opts){
     fs::path p(opts.prefix);
-    auto filename = p.filename().generic_string();   
+    auto filename = p.filename().generic_string();
+    //ROS_ERROR("create directory %s %s", filename.c_str(), opts.prefix.c_str());
     if( filename != opts.prefix ){
       auto len = opts.prefix.length() - filename.length();
       auto dirname = opts.prefix.substr(0, len);
       fs::path directory(dirname);
       fs::create_directories(directory);
+      //ROS_ERROR("create directory 2 %s", dirname.c_str());
     } 
 }
 
