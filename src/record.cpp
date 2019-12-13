@@ -404,13 +404,11 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       multiplier = 3600.0;
     else
       throw ros::Exception("Duration unit must be s, m, or h");
-
       
     opts.max_duration = ros::Duration(duration * multiplier);
     if (opts.max_duration <= ros::Duration(0))
       throw ros::Exception("Duration must be positive.");
   }
-
 
   if( private_nh_.getParam("size", val ) )
   {
@@ -425,39 +423,43 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   {
     opts.node = node;
   }
-  std::string tcpnodelay;
-  if( private_nh_.getParam("tcpnodelay", tcpnodelay ) )
+  std::string str;
+  if( private_nh_.getParam("tcpnodelay", str ) )
   {
       throw ros::Exception("tcpnodelay not supported yet");
   }
 
-  std::string udp;
-  if( private_nh_.getParam("udp", udp ) )
+  if( private_nh_.getParam("udp", str ) )
   {
       throw ros::Exception("udp not supported yet");
   }
 
 #if 1
-  std::string string_topics;
-  if( private_nh_.getParam("topics", string_topics ) ){
-    //
-  }
-  ROS_ERROR("topics size %d ##%s##", string_topics.size(), string_topics.c_str());
-#endif
   //add topics to be rosbaged.
   std::vector<std::string> topics;
-  private_nh_.param<std::vector<std::string>>("topics", topics, topics);
-  ROS_ERROR("topics size %d", topics.size());
-  //add topics to be rosbaged.
-  for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
-    ROS_ERROR("topics %s", i->c_str() );
-    opts.topics.push_back(*i);
+  private_nh_.param<std::vector<std::string>>("topics", topics, topics );//try to get params as string-vector
+  ROS_ERROR("topics vector size %d", topics.size());
+  if( topics.size() > 0 ){
+    //add topics to be rosbaged.
+    for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
+      ROS_ERROR("topics vector %s", i->c_str() );
+      opts.topics.push_back(*i);
+    }
   }
-  std::string exclude_topics;
-  if( private_nh_.getParam("exclude_topics", exclude_topics ) ){
-      opts.do_exclude = true;
-      opts.exclude_regex = exclude_topics;
-  }  
+  else //try to get params as string
+  {
+    std::string string_topics;
+    if( private_nh_.getParam("topics", string_topics ) )
+    {
+      std::stringstream ss(string_topics);
+      std::string s;
+       while( getline(ss, s, ',' )){//split by ',' and add to opts.topics.
+        opts.topics.push_back(s);
+      }
+    }
+    ROS_ERROR("topics string ##%s##", string_topics.c_str());
+  }
+#endif
 
   if(opts.exclude_regex.size() > 0 &&
           !(opts.record_all || opts.regex)) {
@@ -469,14 +471,24 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
 }
 
 #if 1
-//just for debuging
 static void print_topics(rosbag::RecorderOptions& opts){
-    ROS_INFO("topics");
+    ROS_ERROR("topics");
     for (std::vector<std::string>::iterator i = opts.topics.begin(); i != opts.topics.end(); i++){
-      ROS_INFO("%s", i->c_str() );
+      ROS_ERROR("%s", i->c_str() );
     }
 }
 #endif
+
+static void createDirectory(const rosbag::RecorderOptions &opts){
+    fs::path p(opts.prefix);
+    auto filename = p.filename().generic_string();   
+    if( filename != opts.prefix ){
+      auto len = opts.prefix.length() - filename.length();
+      auto dirname = opts.prefix.substr(0, len);
+      fs::path directory(dirname);
+      fs::create_directories(directory);
+    } 
+}
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "record", ros::init_options::AnonymousName);
@@ -497,15 +509,7 @@ int main(int argc, char** argv) {
     ros::NodeHandle private_nh_("~");
     getLaunchParams(opts, private_nh_);
     print_topics(opts);
-    
-    fs::path p(opts.prefix);
-    auto filename = p.filename().generic_string();   
-    if( filename != opts.prefix ){
-      auto len = opts.prefix.length() - filename.length();
-      auto dirname = opts.prefix.substr(0, len);
-      fs::path directory(dirname);
-      fs::create_directories(directory);
-    } 
+    createDirectory(opts);
 
     // Run the recorder
     rosbag::Recorder recorder(opts);
