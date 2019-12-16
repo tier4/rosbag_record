@@ -280,11 +280,9 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
 static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle& private_nh_)
 {
   private_nh_.param("all", opts.record_all, opts.record_all);
-  private_nh_.param("regex", opts.regex, opts.regex);
 
   private_nh_.param("regex", opts.regex, opts.regex);
   int val;
-
   std::string exclude;
   if( private_nh_.getParam("exclude", exclude) )
   {
