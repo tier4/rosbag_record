@@ -328,6 +328,7 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   }
   std::string split;
   if( private_nh_.getParam("split", split ) && split != "" ){
+    opts.split = true;
     if( split.find("duration=") != std::string::npos ) //split: duration=XXXX
     {
       std::string duration_str = split.substr(strlen("duration="));
@@ -356,13 +357,11 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       
       opts.max_duration = ros::Duration(duration * multiplier);
       //ROS_ERROR("split duration %s %d", duration_str.c_str(), duration);
-
       if (opts.max_duration <= ros::Duration(0))
         throw ros::Exception("Duration must be positive.");
     } else if( split.find("size=") != std::string::npos ) {//split: size=XXXXX
       int split_size = std::stoi(split.substr(strlen("size=")));
       //ROS_ERROR("split size %d", split_size);
-      opts.split = true;
       if (split_size < 0)
         throw ros::Exception("Split size must be 0 or positive");
       opts.max_size = 1048576 * static_cast<uint64_t>(split_size);
