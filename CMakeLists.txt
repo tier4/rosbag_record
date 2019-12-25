@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rosbag_record)
 
+add_compile_options(-std=c++11)
+
 if(NOT WIN32)
   set_directory_properties(PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra")
 endif()
@@ -13,14 +15,13 @@ find_package(Boost REQUIRED COMPONENTS date_time regex program_options filesyste
 add_definitions(-D_FILE_OFFSET_BITS=64)
 
 include_directories(
-#  ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 #  ${Boost_INCLUDE_DIRS}
 #  ${BZIP2_INCLUDE_DIR}
-/opt/ros/melodic/include
 )
 
 link_directories(
-/opt/ros/melodic/lib
+/opt/ros/$ENV{ROS_DISTRO}/lib
 )
 
 catkin_package(
