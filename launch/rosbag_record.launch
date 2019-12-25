@@ -24,9 +24,6 @@
         respawn_delay="1"
         args="">
         <param name="output_prefix" value="$(env HOME)/.ros/log/latest/rosbag/latest/rosbag"/>
-        <param name="split" value="true"/>
-        <param name="duration" value="60"/>
-        <param name="max_splits" value="11"/>
         <rosparam command="load" file="$(env HOME)/ros/rosbag/src/rosbag/launch/param.yml"/>
     </node>
     <node pkg="drive_recorder" name="drive_recorder" type="drive_recorder_node" output="screen"     respawn="true" respawn_delay="1">

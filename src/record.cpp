@@ -284,7 +284,7 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
 
   //private_nh_.param("regex", opts.regex, opts.regex);
   std::vector<std::string> regexs;
-  private_nh_.param<std::vector<std::string>>("include", regexs, regexs );
+  private_nh_.param<std::vector<std::string>>("include_topics", regexs, regexs );
   if( regexs.size() > 0 ){
     opts.regex = true;
     for( auto i =  regexs.begin(); i != regexs.end(); i++ ){
@@ -294,7 +294,7 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   }
 
   std::vector<std::string> excludes;
-  private_nh_.param<std::vector<std::string>>("exclude", excludes, excludes );
+  private_nh_.param<std::vector<std::string>>("exclude_topics", excludes, excludes );
   if( excludes.size() > 0 ){
     opts.do_exclude = true;
     auto i =  excludes.begin();
@@ -321,14 +321,64 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
     opts.prefix = output_name;
     opts.append_date = false;
   }
-  if( private_nh_.getParam("split", val ) ){
-    opts.split = true;
-    if (val < 0)
-      throw ros::Exception("Split size must be 0 or positive");
-    opts.max_size = 1048576 * static_cast<uint64_t>(val);    
+  std::string split;
+  if( private_nh_.getParam("split", split ) ){
+    if( split.find("duration=") != std::string::npos ) //split: duration=XXXX
+    {
+      std::string duration_str = split.substr(strlen("duration="));
+      double duration;
+      double multiplier = 1.0;
+      std::string unit("");
+
+      std::istringstream iss(duration_str);
+      if ((iss >> duration).fail())
+       throw ros::Exception("Duration must start with a floating point number.");
+
+      if ( (!iss.eof() && ((iss >> unit).fail())) )
+      {
+        throw ros::Exception("Duration unit must be s, m, or h");
+      }
+      if (unit == std::string(""))
+        multiplier = 1.0;
+      else if (unit == std::string("s"))
+        multiplier = 1.0;
+      else if (unit == std::string("m"))
+        multiplier = 60.0;
+      else if (unit == std::string("h"))
+        multiplier = 3600.0;
+      else
+        throw ros::Exception("Duration unit must be s, m, or h");
+      
+      opts.max_duration = ros::Duration(duration * multiplier);
+      //ROS_ERROR("split duration %s %d", duration_str.c_str(), duration);
+
+      if (opts.max_duration <= ros::Duration(0))
+        throw ros::Exception("Duration must be positive.");
+    } else if( split.find("size=") != std::string::npos ) {//split: size=XXXXX
+      int split_size = std::stoi(split.substr(strlen("size=")));
+      //ROS_ERROR("split size %d", split_size);
+      opts.split = true;
+      if (split_size < 0)
+        throw ros::Exception("Split size must be 0 or positive");
+      opts.max_size = 1048576 * static_cast<uint64_t>(split_size);
+    }else{
+      //no split param
+    }
   }
-  if( private_nh_.getParam("max_splits", val )){
-    opts.max_splits = val;
+  std::string max_splits;
+  if( private_nh_.getParam("max_splits", max_splits )){
+    if( max_splits != "" ){
+      val = std::stoi(max_splits);
+      if(!opts.split)
+      {
+        ROS_WARN("max_splits is ignored without split");
+      }
+      else
+      {
+        opts.max_splits = val;
+      }
+    }
+    //ROS_ERROR("max_splits %d", max_splits.c_str(), opts.max_splits );
   }
 
   if( private_nh_.getParam("buffsize", val) ){
@@ -378,61 +428,17 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       }
       ROS_DEBUG("Rosbag using minimum space of %lld bytes, or %s", opts.min_space, opts.min_space_str.c_str());
   }
-  bool bz2;
-  private_nh_.param("bz2", bz2, false);
-  bool lz4;
-  private_nh_.param("lz4", lz4, false);
-  if (bz2 && lz4)
-  {
-    throw ros::Exception("Can only use one type of compression");
-  }
-  if (bz2)
-  {
-    opts.compression = rosbag::compression::BZ2;
-  }
-  if (lz4)
-  {
-    opts.compression = rosbag::compression::LZ4;
-  }
-
-  std::string duration_str;
-  if( private_nh_.getParam("duration", duration_str ) )
-  {
-    double duration;
-    double multiplier = 1.0;
-    std::string unit("");
-
-    std::istringstream iss(duration_str);
-    if ((iss >> duration).fail())
-      throw ros::Exception("Duration must start with a floating point number.");
-
-    if ( (!iss.eof() && ((iss >> unit).fail())) )
-    {
-      throw ros::Exception("Duration unit must be s, m, or h");
+  std::string compress;
+  if ( private_nh_.getParam("compress", compress) ){
+    if( compress == "bz2" ){
+      opts.compression = rosbag::compression::BZ2;
+    }else if( compress == "lz4" ){
+      opts.compression = rosbag::compression::LZ4;
+    }else if( compress == "" ){
+      //no compress
+    } else {
+      throw ros::Exception("compress must be bz2 or lz4");
     }
-    if (unit == std::string(""))
-      multiplier = 1.0;
-    else if (unit == std::string("s"))
-      multiplier = 1.0;
-    else if (unit == std::string("m"))
-      multiplier = 60.0;
-    else if (unit == std::string("h"))
-      multiplier = 3600.0;
-    else
-      throw ros::Exception("Duration unit must be s, m, or h");
-      
-    opts.max_duration = ros::Duration(duration * multiplier);
-    if (opts.max_duration <= ros::Duration(0))
-      throw ros::Exception("Duration must be positive.");
-  }
-
-  if( private_nh_.getParam("size", val ) )
-  {
-    if (val < 0)
-    {
-      throw ros::Exception("Split size must be 0 or positive");
-    }
-    opts.max_size = val;
   }
   std::string node;
   if( private_nh_.getParam("node", node ) )
@@ -456,7 +462,6 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   //ROS_ERROR("topics vector size %d", topics.size());
   if( topics.size() > 0 ){
     //add topics to be rosbaged.
-    ///for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
     for (auto i = topics.begin(); i != topics.end(); i++){
       //ROS_ERROR("topics vector %s", i->c_str() );
       opts.topics.push_back(*i);

@@ -1,4 +1,4 @@
-exclude:
+exclude_topics:
   [
     /rosout,
     (.*)/image_raw,
@@ -13,5 +13,14 @@ topics:
     /record_cmd
   ]
 
-include:
+include_topics:
   [ /(.*) ]
+
+#split : "duration=60"
+split : "size=60"
+
+compress: ""
+
+max_splits: "11"
+
+
