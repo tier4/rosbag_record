@@ -282,7 +282,7 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   int val;
   std::string all;
   if( private_nh_.getParam("all", all) && all != ""){
-  private_nh_.param("all", opts.record_all, opts.record_all);
+    private_nh_.param("all", opts.record_all, opts.record_all);
   }
   //private_nh_.param("regex", opts.regex, opts.regex);
   std::vector<std::string> regexs;
@@ -311,7 +311,7 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   }
   std::string quiet;
   if( private_nh_.getParam("quiet", quiet) && quiet != ""){
-  private_nh_.param("quiet", opts.quiet, opts.quiet);
+    private_nh_.param("quiet", opts.quiet, opts.quiet);
   }
 
   std::string output_prefix;
@@ -384,7 +384,7 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
 
   std::string buffsize;
   if( private_nh_.getParam("buffsize", buffsize) && buffsize != "" ){
-      val = std::stoi(buffsize);
+    val = std::stoi(buffsize);
     if ( val < 0)
     {
       throw ros::Exception("Buffer size must be 0 or positive");
