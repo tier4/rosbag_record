@@ -475,15 +475,6 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   }
 }
 
-static void print_topics(rosbag::RecorderOptions& opts){
-#if 0
-    ROS_ERROR("topics");
-    for (std::vector<std::string>::iterator i = opts.topics.begin(); i != opts.topics.end(); i++){
-      ROS_ERROR("%s", i->c_str() );
-    }
-#endif
-}
-
 static void createDirectory(const rosbag::RecorderOptions &opts){
     fs::path p(opts.prefix);
     auto filename = p.filename().generic_string();
@@ -496,11 +487,6 @@ static void createDirectory(const rosbag::RecorderOptions &opts){
       //ROS_ERROR("create directory 2 %s", dirname.c_str());
     } 
 }
-
-static void print_opts(const rosbag::RecorderOptions& opts){
-
-}
-
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "record", ros::init_options::AnonymousName);
@@ -520,7 +506,6 @@ int main(int argc, char** argv) {
     }
     ros::NodeHandle private_nh_("~");
     getLaunchParams(opts, private_nh_);
-    print_topics(opts);
     createDirectory(opts);
 
     // Run the recorder
