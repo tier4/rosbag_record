@@ -280,8 +280,10 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
 static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle& private_nh_)
 {
   int val;
+  std::string all;
+  if( private_nh_.getParam("all", all) && all != ""){
   private_nh_.param("all", opts.record_all, opts.record_all);
-
+  }
   //private_nh_.param("regex", opts.regex, opts.regex);
   std::vector<std::string> regexs;
   private_nh_.param<std::vector<std::string>>("include_topics", regexs, regexs );
@@ -307,22 +309,25 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
     opts.exclude_regex = regex;
     //ROS_ERROR("exclude_regex:%s", regex.c_str());
   }
+  std::string quiet;
+  if( private_nh_.getParam("quiet", quiet) && quiet != ""){
   private_nh_.param("quiet", opts.quiet, opts.quiet);
+  }
 
   std::string output_prefix;
-  if( private_nh_.getParam("output_prefix", output_prefix) )
+  if( private_nh_.getParam("output_prefix", output_prefix) && output_prefix != "")
   {
     opts.prefix = output_prefix;
     opts.append_date = true;
   }
   std::string output_name;
-  if( private_nh_.getParam("output_name", output_name) )
+  if( private_nh_.getParam("output_name", output_name) && output_name != "")
   {
     opts.prefix = output_name;
     opts.append_date = false;
   }
   std::string split;
-  if( private_nh_.getParam("split", split ) ){
+  if( private_nh_.getParam("split", split ) && split != "" ){
     if( split.find("duration=") != std::string::npos ) //split: duration=XXXX
     {
       std::string duration_str = split.substr(strlen("duration="));
@@ -361,13 +366,10 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       if (split_size < 0)
         throw ros::Exception("Split size must be 0 or positive");
       opts.max_size = 1048576 * static_cast<uint64_t>(split_size);
-    }else{
-      //no split param
     }
   }
   std::string max_splits;
-  if( private_nh_.getParam("max_splits", max_splits )){
-    if( max_splits != "" ){
+  if( private_nh_.getParam("max_splits", max_splits ) && max_splits != ""){
       val = std::stoi(max_splits);
       if(!opts.split)
       {
@@ -377,29 +379,34 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       {
         opts.max_splits = val;
       }
-    }
     //ROS_ERROR("max_splits %d", max_splits.c_str(), opts.max_splits );
   }
 
-  if( private_nh_.getParam("buffsize", val) ){
+  std::string buffsize;
+  if( private_nh_.getParam("buffsize", buffsize) && buffsize != "" ){
+      val = std::stoi(buffsize);
     if ( val < 0)
     {
       throw ros::Exception("Buffer size must be 0 or positive");
     }
     opts.buffer_size = 1048576 * val;
   }
-  if( private_nh_.getParam("chunksize", val) ){
+  std::string chunksize;
+  if( private_nh_.getParam("chunksize", chunksize) &&  chunksize != "" ){
+    val = std::stoi(chunksize);
     if (val < 0)
     {
       throw ros::Exception("Chunk size must be 0 or positive");
     }
     opts.chunk_size = 1024 * val;
   }
-  if( private_nh_.getParam("limit", val) ){
+  std::string limit;
+  if( private_nh_.getParam("limit", limit) && limit != "" ){
+    val = std::stoi(limit);
     opts.limit = val;
   }
   std::string ms;
-  if ( private_nh_.getParam("min_space", ms) )
+  if ( private_nh_.getParam("min_space", ms) && ms != "" )
   {
       long long int value = 1073741824ull;
       char mul = 0;
@@ -429,29 +436,28 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
       ROS_DEBUG("Rosbag using minimum space of %lld bytes, or %s", opts.min_space, opts.min_space_str.c_str());
   }
   std::string compress;
-  if ( private_nh_.getParam("compress", compress) ){
+  if ( private_nh_.getParam("compress", compress) && compress != "" ){
     if( compress == "bz2" ){
       opts.compression = rosbag::compression::BZ2;
     }else if( compress == "lz4" ){
       opts.compression = rosbag::compression::LZ4;
-    }else if( compress == "" ){
-      //no compress
-    } else {
+    }else{
       throw ros::Exception("compress must be bz2 or lz4");
     }
   }
   std::string node;
-  if( private_nh_.getParam("node", node ) )
+  if( private_nh_.getParam("node", node ) && node != "" )
   {
     opts.node = node;
   }
-  std::string str;
-  if( private_nh_.getParam("tcpnodelay", str ) )
+  std::string tcpnodelay;
+  if( private_nh_.getParam("tcpnodelay", tcpnodelay ) && tcpnodelay != "")
   {
       throw ros::Exception("tcpnodelay not supported yet");
   }
 
-  if( private_nh_.getParam("udp", str ) )
+  std::string udp;
+  if( private_nh_.getParam("udp", udp ) && udp != "" )
   {
       throw ros::Exception("udp not supported yet");
   }
