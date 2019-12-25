@@ -6,21 +6,25 @@ exclude_topics:
     /velodyne_(.*)_manager(.*),
     (.*)/velodyne_points
   ]
-
 topics:
   [
     /decision_maker/state,
     /record_cmd
   ]
-
 include_topics:
   [ /(.*) ]
-
 #split : "duration=60"
 split : "size=60"
-
 compress: ""
-
 max_splits: "11"
-
-
+all: ""
+quiet: ""
+output_name: ""
+buffsize: ""
+chunksize: ""
+limit: ""
+min_space: ""
+compress: ""
+node: ""
+tcpnodelay: ""
+udp: ""
