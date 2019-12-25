@@ -1,0 +1,17 @@
+exclude:
+  [
+    /rosout,
+    (.*)/image_raw,
+    /points_raw,
+    /velodyne_(.*)_manager(.*),
+    (.*)/velodyne_points
+  ]
+
+topics:
+  [
+    /decision_maker/state,
+    /record_cmd
+  ]
+
+include:
+  [ /(.*) ]

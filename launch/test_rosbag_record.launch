@@ -36,4 +36,5 @@
         <param name="poling_interval" value="2"/>
         <param name="log_dir" value="$(env HOME)/.ros/log/latest/rosbag/"/>
         </node>
+    <node pkg="drive_recorder" name="test_drive_recorder" type="test_drive_recorder" output="screen"/>
 </launch>

@@ -265,7 +265,7 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
         opts.topics.push_back(*i);
     }
 
-
+#if 0
     // check that argument combinations make sense
     if(opts.exclude_regex.size() > 0 &&
             !(opts.record_all || opts.regex)) {
@@ -273,21 +273,39 @@ rosbag::RecorderOptions parseOptions(int argc, char** argv) {
                 "Adding implicit 'record all'.");
         opts.record_all = true;
     }
-
+#endif
     return opts;
 }
 
 static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle& private_nh_)
 {
+  int val;
   private_nh_.param("all", opts.record_all, opts.record_all);
 
-  private_nh_.param("regex", opts.regex, opts.regex);
-  int val;
-  std::string exclude;
-  if( private_nh_.getParam("exclude", exclude) )
-  {
+  //private_nh_.param("regex", opts.regex, opts.regex);
+  std::vector<std::string> regexs;
+  private_nh_.param<std::vector<std::string>>("include", regexs, regexs );
+  if( regexs.size() > 0 ){
+    opts.regex = true;
+    for( auto i =  regexs.begin(); i != regexs.end(); i++ ){
+      //ROS_ERROR("regix vector %s", i->c_str() );
+      opts.topics.push_back(*i);
+    }
+  }
+
+  std::vector<std::string> excludes;
+  private_nh_.param<std::vector<std::string>>("exclude", excludes, excludes );
+  if( excludes.size() > 0 ){
     opts.do_exclude = true;
-    opts.exclude_regex = exclude;
+    auto i =  excludes.begin();
+    std::string regex = *i;
+    while( i != excludes.end() ){
+      //ROS_ERROR("exclude %s", i->c_str() );
+      regex += "|" + *i;
+      i++;
+    }
+    opts.exclude_regex = regex;
+    //ROS_ERROR("exclude_regex:%s", regex.c_str());
   }
   private_nh_.param("quiet", opts.quiet, opts.quiet);
 
@@ -438,12 +456,17 @@ static void getLaunchParams(rosbag::RecorderOptions& opts, const ros::NodeHandle
   //ROS_ERROR("topics vector size %d", topics.size());
   if( topics.size() > 0 ){
     //add topics to be rosbaged.
-    for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
+    ///for (std::vector<std::string>::iterator i = topics.begin(); i != topics.end(); i++){
+    for (auto i = topics.begin(); i != topics.end(); i++){
       //ROS_ERROR("topics vector %s", i->c_str() );
       opts.topics.push_back(*i);
     }
   }
-
+#if 0
+   for (auto i = opts.topics.begin(); i != opts.topics.end(); i++){
+     ROS_ERROR("topics %s", i->c_str() );
+   }
+#endif
   if(opts.exclude_regex.size() > 0 &&
           !(opts.record_all || opts.regex)) {
       fprintf(stderr, "Warning: Exclusion regex given, but no topics to subscribe to.\n"
@@ -473,6 +496,11 @@ static void createDirectory(const rosbag::RecorderOptions &opts){
       //ROS_ERROR("create directory 2 %s", dirname.c_str());
     } 
 }
+
+static void print_opts(const rosbag::RecorderOptions& opts){
+
+}
+
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "record", ros::init_options::AnonymousName);
