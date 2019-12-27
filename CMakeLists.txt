@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rosbag_record)
 
-add_compile_options(-std=c++11)
-
 if(NOT WIN32)
   set_directory_properties(PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra")
 endif()
@@ -28,6 +26,8 @@ catkin_package(
   LIBRARIES rosbag_record
 # INCLUDE_DIRS include
   CATKIN_DEPENDS rosconsole roscpp std_srvs topic_tools xmlrpcpp)
+
+add_compile_options(-std=c++11)
 
 add_library(rosbag_record
   src/record.cpp)
